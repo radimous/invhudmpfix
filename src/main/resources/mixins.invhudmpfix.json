@@ -1,0 +1,14 @@
+
+{
+  "required": true,
+  "minVersion": "0.8",
+  "refmap": "mixins.invhudmpfix.refmap.json",
+  "package": "com.radimous.invhudmpfix.mixins",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "CuriosRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
