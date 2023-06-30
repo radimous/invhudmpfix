@@ -17,7 +17,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
-version = '1.1'
+version = '1.2'
 group = 'com.radimous.invhudmpfix' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'invhudmpfix'
 
@@ -179,9 +179,9 @@ dependencies {
 
 
     implementation fg.deobf("curse.maven:inventory-hud-forge-357540:4505142") //.12 18.2
-    //implementation fg.deobf("curse.maven:charms-420955:3770462")
+    implementation fg.deobf("curse.maven:charms-420955:3770462")
     implementation fg.deobf("curse.maven:lazy-dfu-forge-460819:3544496")
-    implementation fg.deobf("curse.maven:modernfix-790626:4565795")
+    //implementation fg.deobf("curse.maven:modernfix-790626:4565795")
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
     // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}") // Adds the full JEI mod as a runtime dependency

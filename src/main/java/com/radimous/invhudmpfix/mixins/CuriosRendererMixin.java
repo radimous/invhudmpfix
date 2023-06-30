@@ -14,14 +14,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import top.theillusivec4.curios.api.CuriosApi;
-import top.theillusivec4.curios.api.CuriosCapability;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.common.slottype.SlotType;
 import top.theillusivec4.curios.server.SlotHelper;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @Mixin(CuriosRenderer.class)
@@ -42,21 +40,14 @@ public abstract class CuriosRendererMixin {
             CuriosApi.setSlotHelper(new SlotHelper());
         }
         LocalPlayer pl = Minecraft.getInstance().player;
-        if (pl != null) {
-            Optional<ICuriosItemHandler> cap = pl.getCapability(CuriosCapability.INVENTORY).resolve();
-            if (cap.isPresent()) {
-                Map<String, ICurioStacksHandler> curiomap = cap.get().getCurios();
-                for (ICurioStacksHandler slot : curiomap.values()) {
-                    for (int i = 0; i < slot.getStacks().getSlots(); i++) {
-                        String slotId = slot.getIdentifier();
-                        if (i > 0) {
-                            slotId = slotId + "_" + (i + 1);
-                        }
-                        CuriosApi.getSlotHelper().addSlotType(new SlotType.Builder(slotId).build());
-                    }
+        if (CuriosApi.getSlotHelper().getSlotTypes().isEmpty() && pl != null) {
+            Optional<ICuriosItemHandler> curiosHandler = CuriosApi.getCuriosHelper().getCuriosHandler(pl).resolve();
+            if (curiosHandler.isPresent()) {
+                for (ICurioStacksHandler slot : curiosHandler.get().getCurios().values()) {
+                    CuriosApi.getSlotHelper().addSlotType(new SlotType.Builder(slot.getIdentifier()).size(slot.getStacks().getSlots()).build());
                 }
             }
-            if(tries == 100  && CuriosApi.getSlotHelper().getSlotTypes().size() == 0){
+            if (tries == 100 && CuriosApi.getSlotHelper().getSlotTypes().size() == 0) {
                 pl.sendMessage(new TextComponent("[InvHudMPFix] Curio slots failed to load 100 times, remove this mod if your server doesn't support curios."), Util.NIL_UUID);
             }
         }
@@ -72,8 +63,9 @@ public abstract class CuriosRendererMixin {
             last = System.currentTimeMillis();
         }
     }
+
     @Inject(method = "disable", at = @At("HEAD"))
-    public void resetTries(CallbackInfo ci){
+    public void resetTries(CallbackInfo ci) {
         tries = 0;
     }
 
