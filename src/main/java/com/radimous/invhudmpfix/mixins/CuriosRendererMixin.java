@@ -1,26 +1,24 @@
 package com.radimous.invhudmpfix.mixins;
 
-import com.radimous.invhudmpfix.InvHudMPFix;
+import dlovin.inventoryhud.InventoryHUD;
 import dlovin.inventoryhud.gui.renderers.CuriosRenderer;
+import dlovin.inventoryhud.utils.CuriosIconUtils;
+import dlovin.inventoryhud.utils.CuriosSaveUtils;
 import dlovin.inventoryhud.utils.CuriosSlot;
-import net.minecraft.Util;
+import dlovin.inventoryhud.utils.WidgetAligns;
+import dlovin.inventoryhud.utils.WidgetAligns.HAlign;
+import dlovin.inventoryhud.utils.WidgetAligns.VAlign;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.chat.TextComponent;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import top.theillusivec4.curios.api.CuriosApi;
-import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
-import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
-import top.theillusivec4.curios.common.slottype.SlotType;
-import top.theillusivec4.curios.server.SlotHelper;
 
 import java.util.HashMap;
-import java.util.Optional;
 
 @Mixin(CuriosRenderer.class)
 public abstract class CuriosRendererMixin {
@@ -28,37 +26,54 @@ public abstract class CuriosRendererMixin {
     private int tries = 0;
 
     @Shadow
-    public abstract HashMap<String, CuriosSlot> slots();
+    private HashMap<String, CuriosSlot> slots;
 
-    @Shadow
-    public abstract void setupTrinkets();
+    /**
+     * @author radimous
+     * @reason replaces slotHelper usage with curiosHelper, because slotHelper is not intended to be used on client and is null in MP
+     */
+    @Overwrite
+    public void setupTrinkets() {
+        this.tries++;
+        this.slots = new HashMap<>();
+        int[] i = {0};
+        CuriosApi.getCuriosHelper()
+            .getCuriosHandler(Minecraft.getInstance().player).resolve()
+            .ifPresent(curiosItemHandler ->
+                curiosItemHandler.getCurios().values()
+                    .forEach(slot -> {
+                        for (int j = 0; j < slot.getSlots(); ++j) {
+                            String slotId = slot.getIdentifier();
+                            if (j > 0) {
+                                slotId = slotId + "_" + (j + 1);
+                            }
 
-    @Inject(method = "setupTrinkets", at = @At("HEAD"))
-    public void initCurios(CallbackInfo ci) {
-        tries++;
-        if (CuriosApi.getSlotHelper() == null) {
-            CuriosApi.setSlotHelper(new SlotHelper());
-        }
-        LocalPlayer pl = Minecraft.getInstance().player;
-        if (CuriosApi.getSlotHelper().getSlotTypes().isEmpty() && pl != null) {
-            Optional<ICuriosItemHandler> curiosHandler = CuriosApi.getCuriosHelper().getCuriosHandler(pl).resolve();
-            if (curiosHandler.isPresent()) {
-                for (ICurioStacksHandler slot : curiosHandler.get().getCurios().values()) {
-                    CuriosApi.getSlotHelper().addSlotType(new SlotType.Builder(slot.getIdentifier()).size(slot.getStacks().getSlots()).build());
-                }
-            }
-            if (tries == 100 && CuriosApi.getSlotHelper().getSlotTypes().size() == 0) {
-                pl.sendMessage(new TextComponent("[InvHudMPFix] Curio slots failed to load 100 times, remove this mod if your server doesn't support curios."), Util.NIL_UUID);
-            }
-        }
-        if (CuriosApi.getSlotHelper().getSlotTypes().size() != 0) {
-            InvHudMPFix.logger.info("Loading curios took " + tries + " tries.");
+                            this.slots.put(
+                                slotId,
+                                new CuriosSlot(
+                                    0,
+                                    i[0] += 20,
+                                    new WidgetAligns(HAlign.LEFT, VAlign.TOP),
+                                    false,
+                                    CuriosIconUtils.getRealResourceLocation(slot.getIdentifier(), CuriosApi.getIconHelper().getIcon(slot.getIdentifier()))
+                                )
+                            );
+                        }
+                    })
+            );
+        if (this.slots.size() == 0) {
+            InventoryHUD.log("NO CURIOS LOADED");
+        } else {
+            CuriosSaveUtils.sync();
+            InventoryHUD.log(String.format("Curios has been initialized with %d slot(s) after %d tries", this.slots.size(), this.tries));
         }
     }
-
+    // tries to get curios again
+    // ICuriosItemHandler#getCurios returns empty map when server fails to send curio slots (bad connection) or when server has 0 curios
+    // the former is why it's needed, the latter is the reason why it's capped to 100 tries
     @Inject(method = "isEmpty", at = @At("HEAD"))
     public void isEmpty(CallbackInfoReturnable<Boolean> cir) {
-        if (slots().isEmpty() && tries < 100 && System.currentTimeMillis() - last > 3000) {
+        if (this.slots.isEmpty() && tries < 100 && System.currentTimeMillis() - last > 3000) {
             setupTrinkets();
             last = System.currentTimeMillis();
         }
