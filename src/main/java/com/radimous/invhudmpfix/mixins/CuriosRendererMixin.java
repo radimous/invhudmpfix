@@ -28,6 +28,8 @@ public abstract class CuriosRendererMixin {
     @Shadow
     private HashMap<String, CuriosSlot> slots;
 
+    @Shadow public abstract HashMap<String, CuriosSlot> slots();
+
     /**
      * @author radimous
      * @reason replaces slotHelper usage with curiosHelper, because slotHelper is not intended to be used on client and is null in MP
@@ -73,7 +75,7 @@ public abstract class CuriosRendererMixin {
     // the former is why it's needed, the latter is the reason why it's capped to 100 tries
     @Inject(method = "isEmpty", at = @At("HEAD"))
     public void isEmpty(CallbackInfoReturnable<Boolean> cir) {
-        if (this.slots.isEmpty() && tries < 100 && System.currentTimeMillis() - last > 3000) {
+        if (slots().isEmpty() && tries < 100 && System.currentTimeMillis() - last > 3000) {
             setupTrinkets();
             last = System.currentTimeMillis();
         }
